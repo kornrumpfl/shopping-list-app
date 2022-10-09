@@ -1,48 +1,68 @@
 import "./App.css";
 import { useState, useEffect } from "react";
 import FuzzySearch from "fuzzy-search";
-import SuggestionList from "./components/suggestions/SuggestionList";
+import SuggestionList from "./components/SuggestionList";
+import ShoppingList from "./components/ShoppingList";
+import {saveToLocal,loadFromLocal} from "../src/components/LocalStorage"
+
 
 
 function App() {
 
-const [shoppingList, setShoppingList] = useState(0);
+const [shoppingList, setShoppingList] = useState(loadFromLocal("shoppingList") ?? []);
 const [fetchData, setFetchData]=useState([]);
 const [items,setItems]=useState([]);
     
+useEffect(()=>{
+  saveToLocal("shoppingList",shoppingList);
+},[shoppingList])
+
 
 useEffect(() => {
       async function getData() {  
         const response = await fetch(`https://fetch-me.vercel.app/api/shopping/items`);
         let actualData = await response.json();
-        setFetchData(actualData.data);
-        console.log(fetchData);
+        setFetchData(actualData.data)
       }
       getData();
 },[])
+
+function addShoppingList(itemId){
+  setShoppingList([items.filter(item => itemId === item._id), ...shoppingList]);
+}
  
+function onDelete(cardId){
+  setShoppingList(shoppingList.filter(({_id}) => cardId !== _id));
+}
 function makeSearch(itemName) {
-      console.log(itemName)
-      const searcher = new FuzzySearch(fetchData, ["name.en", "id"],{
-        caseSensitive: true,
+      const searcher = new FuzzySearch(fetchData, ["name.en"],{
+        caseSensitive: false,
       });
-      setItems(searcher.search(itemName));
-      console.log(searcher.search(itemName));
+      console.log(fetchData)
+      setItems(searcher.search(itemName))
 }
   return (
     <div className="App">
       <h1>Shopping List App</h1>
-      {/* shopping list items */}
-      <div>{shoppingList}</div>
-      {/* text input */}
+{/* shopping list items */}
+      <div>
+        <ShoppingList 
+        shoppingList={shoppingList}
+        onDelete={onDelete}
+        />
+      </div>
+{/* text input */}
       <input
         type="search"
         onChange={(e) => makeSearch(e.target.value)}
         placeholder="type what you want here"
       />
-      {/* search results */}
+{/* search results */}
       <div>
-        <SuggestionList items={items}/>
+        <SuggestionList 
+        items={items}
+        addShoppingList={addShoppingList}
+        />
       </div>
     </div>
   );
